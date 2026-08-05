@@ -37,10 +37,7 @@ final class User: Model, @unchecked Sendable {
         self.passwordHash = passwordHash
     }
     
-    func toDTO() -> TodoDTO {
-        .init(
-            id: self.id,
-            title: self.$name.value,
-        )
+    func toDTO() -> UserDTO {
+        UserDTO(id: self.id, name: self.name, email: self.email, createdAt: self.createdAt)
     }
 }

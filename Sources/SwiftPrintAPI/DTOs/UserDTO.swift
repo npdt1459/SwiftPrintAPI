@@ -12,15 +12,5 @@ struct UserDTO: Content {
     var id: UUID?
     var name: String
     var email: String
-    var passwordHash: String
-    
-    func toModel() -> User {
-        let model = User()
-        
-        model.id = self.id
-        model.name = self.name
-        model.email = self.email
-        model.passwordHash = self.passwordHash
-        return model
-    }
+    var createdAt: Date?
 }

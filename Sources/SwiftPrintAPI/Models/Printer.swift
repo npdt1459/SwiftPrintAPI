@@ -1,11 +1,12 @@
-import Fluent
-import struct Foundation.UUID
 //
 //  Printer.swift
 //  SwiftPrintAPI
 //
 //  Created by Nathan Andrei Pascale on 7/31/26.
 //
+
+import Fluent
+import struct Foundation.UUID
 
 final class Printer: Model, @unchecked Sendable {
     static let schema = "printers"
@@ -17,7 +18,7 @@ final class Printer: Model, @unchecked Sendable {
     var title: String
     
     @Field(key: "area")
-    var area: String
+    var areaString: String
     
     @OptionalParent(key: "user_id")
     var user: User?
@@ -25,18 +26,15 @@ final class Printer: Model, @unchecked Sendable {
 
     init() { }
 
-    init(id: UUID? = nil, title: String, area: String, user_id: User? = nil) {
+    init(id: UUID? = nil, title: String, areaString: String, user: User? = nil) {
         self.id = id
         self.title = title
-        self.area = area
+        self.areaString = areaString
         self.user = user
     }
     
-    func toDTO() -> TodoDTO {
-        .init(
-            id: self.id,
-            title: self.$title.value
-        )
+    func toDTO() -> PrinterDTO {
+        PrinterDTO(id: self.id, title: self.title, areaString: self.areaString, userID: self.$user.id)
     }
 }
 
