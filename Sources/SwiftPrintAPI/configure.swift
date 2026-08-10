@@ -20,6 +20,7 @@ func configure(_ app: Application) async throws {
 
     app.migrations.add(CreateUser())
     app.migrations.add(CreatePrinter())
+    app.migrations.add(CreateFilament())
 
     // register routes
     try routes(app)

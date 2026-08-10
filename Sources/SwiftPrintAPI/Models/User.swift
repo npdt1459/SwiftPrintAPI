@@ -27,6 +27,9 @@ final class User: Model, @unchecked Sendable {
     
     @Children(for: \.$user)
     var printers: [Printer]
+    
+    @Children(for: \.$user)
+    var filaments: [Filament]
 
     init() { }
 

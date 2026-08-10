@@ -33,8 +33,11 @@ struct UserController: RouteCollection {
     func login(req: Request) async throws -> String {
         let dto = try req.content.decode(UserLoginDTO.self)
         
-        guard let user = try await User.query(on: req.db).filter(\.$email == dto.email).first() else{
-            throw Abort(.unauthorized)
+        guard let user = try await User.query(on: req.db)
+            .filter(\.$email == dto.email)
+            .first()
+        else{
+            throw Abort(.notFound)
         }
         
         if try Bcrypt.verify(dto.password, created: user.passwordHash) {

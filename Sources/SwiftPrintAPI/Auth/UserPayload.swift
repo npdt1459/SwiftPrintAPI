@@ -5,9 +5,10 @@
 //  Created by Nathan Andrei Pascale on 8/4/26.
 //
 import JWT
+import Vapor
 import Foundation
 
-struct UserPayload: JWTPayload {
+struct UserPayload: JWTPayload, Authenticatable {
     var subject: SubjectClaim
     var expiration: ExpirationClaim
 
