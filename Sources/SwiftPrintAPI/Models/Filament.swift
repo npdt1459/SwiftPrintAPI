@@ -20,27 +20,31 @@ final class Filament: Model, @unchecked Sendable {
     @Field(key: "color")
     var color: String
     
-    @Field(key: "Material")
+    @Field(key: "material")
     var material: String
     
-    @Field(key: "weight")
-    var weight: Double
+    @Field(key: "weightGrams")
+    var weightGrams: Double
+    
+    @Field(key: "costPerKg")
+    var costPerKg: Double
     
     @OptionalParent(key: "user_id")
     var user: User?
     
     init() {}
     
-    init(id: UUID? = nil, title: String, material: String, color: String, weight: Double, user: User? = nil) {
+    init(id: UUID? = nil, title: String, color: String, material: String, weightGrams: Double, costPerKg: Double, user: User? = nil) {
         self.id = id
         self.title = title
         self.color = color
         self.material = material
-        self.weight = weight
-        self.user = user
+        self.weightGrams = weightGrams
+        self.costPerKg = costPerKg
+        self.$user.id = user?.id
     }
     
     func toDTO() -> FilamentDTO {
-        FilamentDTO(id: self.id, title: self.title, color: self.color, material: self.material, weight: self.weight, userID: self.$user.id)
+        FilamentDTO(id: self.id, title: self.title, color: self.color, material: self.material, weightGrams: self.weightGrams, costPerKg: self.costPerKg, userID: self.$user.id)
     }
 }

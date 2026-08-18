@@ -13,6 +13,7 @@ struct FilamentDTO: Content {
     var title: String
     var color: String
     var material: String
-    var weight: Double
+    var weightGrams: Double
+    var costPerKg: Double
     var userID: UUID?
 }

@@ -21,10 +21,11 @@ func configure(_ app: Application) async throws {
     app.migrations.add(CreateUser())
     app.migrations.add(CreatePrinter())
     app.migrations.add(CreateFilament())
+    app.migrations.add(CreatePrintJob())
 
     // register routes
     try routes(app)
     
     // Registering JWT singing keys
-    await app.jwt.keys.add(hmac: HMACKey(stringLiteral: Environment.get("wiggle") ?? "insecure-dev-secret"), digestAlgorithm: .sha256)
+    await app.jwt.keys.add(hmac: HMACKey(stringLiteral: Environment.get("JWT_SECRET") ?? "insecure-dev-secret"), digestAlgorithm: .sha256)
 }

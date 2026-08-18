@@ -20,21 +20,25 @@ final class Printer: Model, @unchecked Sendable {
     @Field(key: "area")
     var areaString: String
     
+    @Field(key: "totalPrintMinutes")
+    var totalPrintMinutes: Double
+    
     @OptionalParent(key: "user_id")
     var user: User?
 
 
     init() { }
 
-    init(id: UUID? = nil, title: String, areaString: String, user: User? = nil) {
+    init(id: UUID? = nil, title: String, areaString: String, totalPrintMinutes: Double, user: User? = nil) {
         self.id = id
         self.title = title
         self.areaString = areaString
-        self.user = user
+        self.totalPrintMinutes = totalPrintMinutes
+        self.$user.id = user?.id
     }
     
     func toDTO() -> PrinterDTO {
-        PrinterDTO(id: self.id, title: self.title, areaString: self.areaString, userID: self.$user.id)
+        PrinterDTO(id: self.id, title: self.title, areaString: self.areaString, totalPrintMinutes: self.totalPrintMinutes, userID: self.$user.id)
     }
 }
 

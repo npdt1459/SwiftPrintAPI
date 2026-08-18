@@ -33,6 +33,7 @@ struct PrinterController: RouteCollection {
         let printer = Printer(
             title: dto.title,
             areaString: dto.areaString,
+            totalPrintMinutes: 0,
             user: user
         )
         
@@ -67,7 +68,7 @@ struct PrinterController: RouteCollection {
         
         guard let printerID = req.parameters.get("id", as: UUID.self)
         else{
-            throw Abort(.notFound)
+            throw Abort(.badRequest)
         }
         
         guard let printer = try await Printer.query(on: req.db)
@@ -109,6 +110,7 @@ struct PrinterController: RouteCollection {
         if let newArea = dto.areaString {
             printer.areaString = newArea
         }
+        
         try await printer.save(on: req.db)
         
         return printer.toDTO()

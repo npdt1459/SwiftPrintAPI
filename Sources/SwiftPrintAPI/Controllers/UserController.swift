@@ -12,8 +12,10 @@ import JWT
 struct UserController: RouteCollection {
     func boot(routes: any RoutesBuilder) throws {
         let users = routes.grouped("users") // groups into /users/...
+        let protected = users.grouped(UserPayload.authenticator())
         users.post("register", use: register) // /users/register
         users.post("login", use: login) // /users/login
+        protected.patch(use: patch)
     }
 
     func register(req: Request) async throws -> UserDTO {
@@ -49,5 +51,31 @@ struct UserController: RouteCollection {
         } else{
             throw Abort(.unauthorized)
         }
+    }
+    
+    func patch(req: Request) async throws -> UserDTO {
+        let payload = try req.auth.require(UserPayload.self)
+        let dto = try req.content.decode(UserPatchDTO.self)
+        
+        guard let userID = UUID(payload.subject.value)
+        else{
+            throw Abort(.unauthorized)
+        }
+        
+        guard let user = try await User.find(userID, on: req.db)
+        else {
+            throw Abort(.notFound)
+        }
+        
+        if let newEmail = dto.email {
+            user.email = newEmail
+        }
+        if let newPassword = dto.password {
+            let newPasswordHash = try Bcrypt.hash(newPassword)
+            user.passwordHash = newPasswordHash
+        }
+        
+        try await user.save(on: req.db)
+        return user.toDTO()
     }
 }

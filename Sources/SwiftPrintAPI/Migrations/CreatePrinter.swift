@@ -13,6 +13,7 @@ struct CreatePrinter: AsyncMigration {
             .field("title", .string, .required)
             .field("area", .string, .required)
             .field("user_id", .uuid, .references("users", "id"))
+            .field("totalPrintMinutes", .double, .required)
             .create()
     }
 
