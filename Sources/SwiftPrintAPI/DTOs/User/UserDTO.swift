@@ -1,5 +1,5 @@
 //
-//  PrinterDTO.swift
+//  UserDTO.swift
 //  SwiftPrintAPI
 //
 //  Created by Nathan Andrei Pascale on 8/1/26.
@@ -8,9 +8,9 @@
 import Fluent
 import Vapor
 
-struct PrinterDTO: Content {
+struct UserDTO: Content {
     var id: UUID?
-    var title: String
-    var areaString: String
-    var userID: UUID?
+    var name: String
+    var email: String
+    var createdAt: Date?
 }
