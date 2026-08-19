@@ -14,7 +14,6 @@ struct PrintJobCreateDTO: Content {
     var duration: Double
     var weightGrams: Double
     var success: Bool
-    var cost: Double
     var printerID: UUID
     var filamentID: UUID
 }

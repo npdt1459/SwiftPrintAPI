@@ -12,5 +12,4 @@ struct PrintJobPatchDTO: Content {
     var duration: Double?
     var weightGrams: Double?
     var success: Bool?
-    var cost: Double?
 }
