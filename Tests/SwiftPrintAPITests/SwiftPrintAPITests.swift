@@ -30,55 +30,200 @@ struct SwiftPrintAPITests {
         }
     }
     
-    @Test("Getting all the Todos")
-    func getAllTodos() async throws {
+    @Test("Registering a User")
+    func registerUser() async throws {
         try await withApp { app in
-            let sampleTodos = [Todo(title: "sample1"), Todo(title: "sample2")]
-            try await sampleTodos.create(on: app.db)
-            
-            try await app.testing().test(.GET, "todos", afterResponse: { res async throws in
+            let dto = UserCreateDTO(name: "Test User", email: "test@example.com", password: "password123")
+            try await app.testing().test(.POST, "users/register", beforeRequest: { req in
+                try req.content.encode(dto)
+            }, afterResponse: { res async in
                 #expect(res.status == .ok)
-                #expect(try
-                    res.content.decode([TodoDTO].self).sorted(by: { ($0.title ?? "") < ($1.title ?? "") }) ==
-                    sampleTodos.map { $0.toDTO() }.sorted(by: { ($0.title ?? "") < ($1.title ?? "") })
-                )
             })
         }
     }
     
-    @Test("Creating a Todo")
-    func createTodo() async throws {
-        let newDTO = TodoDTO(id: nil, title: "test")
-        
+    @Test("Verifying User Login")
+    func loginUser() async throws {
         try await withApp { app in
-            try await app.testing().test(.POST, "todos", beforeRequest: { req in
-                try req.content.encode(newDTO)
+            let registerDTO = UserCreateDTO(name: "Test User", email: "test@example.com", password: "password123")
+                    try await app.testing().test(.POST, "users/register", beforeRequest: { req in
+                        try req.content.encode(registerDTO)
+                    })
+            
+            let loginDTO = UserLoginDTO(email: "test@example.com", password: "password123")
+            try await app.testing().test(.POST, "users/login", beforeRequest: { req in
+                try req.content.encode(loginDTO)
+            }, afterResponse: { res async in
+                #expect(res.status == .ok)
+                #expect(res.body.string.isEmpty == false)
+            })
+        }
+    }
+    @Test("Creating a Printer")
+    func createPrinter() async throws {
+        try await withApp { app in
+            // Register + log in first, since printers/register is a protected route
+            let registerDTO = UserCreateDTO(name: "Test User", email: "test@example.com", password: "password123")
+            try await app.testing().test(.POST, "users/register", beforeRequest: { req in
+                try req.content.encode(registerDTO)
+            })
+
+            var token = ""
+            let loginDTO = UserLoginDTO(email: "test@example.com", password: "password123")
+            try await app.testing().test(.POST, "users/login", beforeRequest: { req in
+                try req.content.encode(loginDTO)
+            }, afterResponse: { res async in
+                token = res.body.string
+            })
+
+            let printerDTO = PrinterCreateDTO(title: "Test Printer", areaString: "220x220x250")
+            try await app.testing().test(.POST, "printers/register", beforeRequest: { req in
+                req.headers.bearerAuthorization = BearerAuthorization(token: token)
+                try req.content.encode(printerDTO)
             }, afterResponse: { res async throws in
                 #expect(res.status == .ok)
-                let models = try await Todo.query(on: app.db).all()
-                #expect(models.map({ $0.toDTO().title }) == [newDTO.title])
+                let printer = try res.content.decode(PrinterDTO.self)
+                #expect(printer.title == printerDTO.title)
+                #expect(printer.areaString == printerDTO.areaString)
+                #expect(printer.totalPrintMinutes == 0)
             })
         }
     }
     
-    @Test("Deleting a Todo")
-    func deleteTodo() async throws {
-        let testTodos = [Todo(title: "test1"), Todo(title: "test2")]
-        
+    @Test("User Cannot Access Another User's Printer")
+    func printerOwnershipEnforced() async throws {
         try await withApp { app in
-            try await testTodos.create(on: app.db)
+            // User A
+            let userA = UserCreateDTO(name: "User A", email: "usera@example.com", password: "password123")
+            try await app.testing().test(.POST, "users/register", beforeRequest: { req in
+                try req.content.encode(userA)
+            })
+            var tokenA = ""
+            try await app.testing().test(.POST, "users/login", beforeRequest: { req in
+                try req.content.encode(UserLoginDTO(email: userA.email, password: userA.password))
+            }, afterResponse: { res async in
+                tokenA = res.body.string
+            })
+
+            // User B
+            let userB = UserCreateDTO(name: "User B", email: "userb@example.com", password: "password123")
+            try await app.testing().test(.POST, "users/register", beforeRequest: { req in
+                try req.content.encode(userB)
+            })
+            var tokenB = ""
+            try await app.testing().test(.POST, "users/login", beforeRequest: { req in
+                try req.content.encode(UserLoginDTO(email: userB.email, password: userB.password))
+            }, afterResponse: { res async in
+                tokenB = res.body.string
+            })
+
+            // User A creates a printer
+            var printerID = UUID()
+            // TODO: POST printers/register using tokenA, capture printer.id into printerID
             
-            try await app.testing().test(.DELETE, "todos/\(testTodos[0].requireID())", afterResponse: { res async throws in
-                #expect(res.status == .noContent)
-                let model = try await Todo.find(testTodos[0].id, on: app.db)
-                #expect(model == nil)
+            let printerDTO = PrinterCreateDTO(title: "Test Printer", areaString: "220x220x250")
+            try await app.testing().test(.POST, "printers/register", beforeRequest: { req in
+                req.headers.bearerAuthorization = BearerAuthorization(token: tokenA)
+                try req.content.encode(printerDTO)
+            }, afterResponse: { res async throws in
+                #expect(res.status == .ok)
+                let printer = try res.content.decode(PrinterDTO.self)
+                printerID = printer.id!
+                #expect(printer.title == printerDTO.title)
+                #expect(printer.areaString == printerDTO.areaString)
+                #expect(printer.totalPrintMinutes == 0)
+            })
+
+            // User B tries to access User A's printer
+            // TODO: GET "printers/\(printerID)" using tokenB, assert res.status == .notFound
+            
+            try await app.testing().test(.GET, "printers/\(printerID)", beforeRequest: { req in
+                req.headers.bearerAuthorization = BearerAuthorization(token: tokenB)
+            }, afterResponse: { res async in
+                #expect(res.status == .notFound)
             })
         }
     }
-}
 
-extension TodoDTO: Equatable {
-    static func == (lhs: Self, rhs: Self) -> Bool {
-        lhs.id == rhs.id && lhs.title == rhs.title
+    @Test("Creating a Filament")
+    func createFilament() async throws {
+        try await withApp { app in
+            let registerDTO = UserCreateDTO(name: "Test User", email: "test@example.com", password: "password123")
+            try await app.testing().test(.POST, "users/register", beforeRequest: { req in
+                try req.content.encode(registerDTO)
+            })
+
+            var token = ""
+            let loginDTO = UserLoginDTO(email: "test@example.com", password: "password123")
+            try await app.testing().test(.POST, "users/login", beforeRequest: { req in
+                try req.content.encode(loginDTO)
+            }, afterResponse: { res async in
+                token = res.body.string
+            })
+
+            let filamentDTO = FilamentCreateDTO(title: "Test PLA", color: "Black", material: "PLA", weightGrams: 1000, costPerKg: 20)
+            try await app.testing().test(.POST, "filaments/register", beforeRequest: { req in
+                req.headers.bearerAuthorization = BearerAuthorization(token: token)
+                try req.content.encode(filamentDTO)
+            }, afterResponse: { res async throws in
+                #expect(res.status == .ok)
+                let filament = try res.content.decode(FilamentDTO.self)
+                #expect(filament.title == filamentDTO.title)
+                #expect(filament.weightGrams == filamentDTO.weightGrams)
+                #expect(filament.costPerKg == filamentDTO.costPerKg)
+            })
+        }
     }
+
+    @Test("Creating a PrintJob")
+    func createPrintJob() async throws {
+        try await withApp { app in
+            let registerDTO = UserCreateDTO(name: "Test User", email: "test@example.com", password: "password123")
+            try await app.testing().test(.POST, "users/register", beforeRequest: { req in
+                try req.content.encode(registerDTO)
+            })
+
+            var token = ""
+            let loginDTO = UserLoginDTO(email: "test@example.com", password: "password123")
+            try await app.testing().test(.POST, "users/login", beforeRequest: { req in
+                try req.content.encode(loginDTO)
+            }, afterResponse: { res async in
+                token = res.body.string
+            })
+
+            // PrintJob needs a real printer + filament to reference, so create both first
+            var printerID = UUID()
+            let printerDTO = PrinterCreateDTO(title: "Test Printer", areaString: "220x220x250")
+            try await app.testing().test(.POST, "printers/register", beforeRequest: { req in
+                req.headers.bearerAuthorization = BearerAuthorization(token: token)
+                try req.content.encode(printerDTO)
+            }, afterResponse: { res async throws in
+                let printer = try res.content.decode(PrinterDTO.self)
+                printerID = printer.id!
+            })
+
+            var filamentID = UUID()
+            let filamentDTO = FilamentCreateDTO(title: "Test PLA", color: "Black", material: "PLA", weightGrams: 1000, costPerKg: 20)
+            try await app.testing().test(.POST, "filaments/register", beforeRequest: { req in
+                req.headers.bearerAuthorization = BearerAuthorization(token: token)
+                try req.content.encode(filamentDTO)
+            }, afterResponse: { res async throws in
+                let filament = try res.content.decode(FilamentDTO.self)
+                filamentID = filament.id!
+            })
+
+            let printJobDTO = PrintJobCreateDTO(duration: 120, weightGrams: 50, success: true, printerID: printerID, filamentID: filamentID)
+            try await app.testing().test(.POST, "printJobs/register", beforeRequest: { req in
+                req.headers.bearerAuthorization = BearerAuthorization(token: token)
+                try req.content.encode(printJobDTO)
+            }, afterResponse: { res async throws in
+                #expect(res.status == .ok)
+                let printjob = try res.content.decode(PrintJobDTO.self)
+                #expect(printjob.duration == printJobDTO.duration)
+                #expect(printjob.weightGrams == printJobDTO.weightGrams)
+                #expect(printjob.cost == 1.0)
+            })
+        }
+    }
+
 }
