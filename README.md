@@ -1,21 +1,21 @@
 # SwiftPrintAPI
 
-A REST API for managing a 3D print queue, printer fleet, and filament inventory — built with **Swift 6** and **Vapor 4**. Users register, log in, and manage their own printers, filament spools, and print jobs, with print jobs automatically depleting filament weight and accumulating printer usage on creation, patch, and delete.
+A REST API for managing a 3D print queue, printer fleet, and filament inventory - built with **Swift 6** and **Vapor 4**. Users register, log in, and manage their own printers, filament spools, and print jobs, with print jobs automatically depleting filament weight and accumulating printer usage on creation, patch, and delete.
 
-Built as a backend portfolio project, loosely inspired by BambuLab-style 3D printer management (without live printer/MQTT integration by design — this project focuses on the API/data layer).
+Built as a backend portfolio project, loosely inspired by BambuLab-style 3D printer management (without live printer/MQTT integration by design - this project focuses on the API/data layer).
 
 ## Features
 
-- **JWT authentication** — register and log in with a hashed password (BCrypt), receive a signed JWT, and use it as a Bearer token on every protected route.
-- **Ownership-scoped resources** — every printer, filament, and print job belongs to the authenticated user; users can never read, edit, or delete another user's data.
+- **JWT authentication** - register and log in with a hashed password (BCrypt), receive a signed JWT, and use it as a Bearer token on every protected route.
+- **Ownership-scoped resources** - every printer, filament, and print job belongs to the authenticated user; users can never read, edit, or delete another user's data.
 - **Full CRUD** on printers, filaments, and print jobs, plus user registration, login, and profile updates.
 - **Real business logic**, not just a CRUD wrapper:
   - Creating a print job deducts its weight from the linked filament and adds its duration to the linked printer's total print time.
   - Patching a print job recalculates those deltas against the filament and printer instead of just overwriting fields.
   - Deleting a print job reverses its effect, restoring the filament weight and printer minutes it had consumed.
-  - Print cost is computed server-side from `weightGrams` and the filament's `costPerKg` — never trusted from the client.
+  - Print cost is computed server-side from `weightGrams` and the filament's `costPerKg` - never trusted from the client.
 - **Automated test suite** using Swift's modern Testing framework (XCTest's successor) and `VaporTesting`, covering registration/login, ownership enforcement across all three resources, print job business logic, and auth failure cases.
-- **Dockerized** — Postgres, the app, and one-off migration/revert services all run via `docker compose`.
+- **Dockerized** - Postgres, the app, and one-off migration/revert services all run via `docker compose`.
 
 ## Tech Stack
 
@@ -34,17 +34,17 @@ Built as a backend portfolio project, loosely inspired by BambuLab-style 3D prin
 
 Each resource follows a consistent three-layer pattern:
 
-- **Model** (`Sources/SwiftPrintAPI/Models`) — the Fluent-backed database representation.
-- **Migration** (`Sources/SwiftPrintAPI/Migrations`) — defines the table schema.
-- **DTOs** (`Sources/SwiftPrintAPI/DTOs`) — separate `Create`, response, and `Patch` shapes per resource, so clients never see or set fields like `passwordHash`, ownership IDs, or server-computed totals.
-- **Controller** (`Sources/SwiftPrintAPI/Controllers`) — a `RouteCollection` handling decode → authorize → business logic → save → respond.
+- **Model** (`Sources/SwiftPrintAPI/Models`) - the Fluent-backed database representation.
+- **Migration** (`Sources/SwiftPrintAPI/Migrations`) - defines the table schema.
+- **DTOs** (`Sources/SwiftPrintAPI/DTOs`) - separate `Create`, response, and `Patch` shapes per resource, so clients never see or set fields like `passwordHash`, ownership IDs, or server-computed totals.
+- **Controller** (`Sources/SwiftPrintAPI/Controllers`) - a `RouteCollection` handling decode → authorize → business logic → save → respond.
 
 ### Data model
 
-- **User** — `name`, `email`, `passwordHash`, has many printers and filaments.
-- **Printer** — `title`, `area`, `totalPrintMinutes` (accumulated automatically), belongs to a user.
-- **Filament** — `title`, `color`, `material`, `weightGrams` (depleted automatically), `costPerKg`, belongs to a user.
-- **PrintJob** — `duration`, `weightGrams`, `success`, `cost` (computed), references a user, printer, and filament.
+- **User** - `name`, `email`, `passwordHash`, has many printers and filaments.
+- **Printer** - `title`, `area`, `totalPrintMinutes` (accumulated automatically), belongs to a user.
+- **Filament** - `title`, `color`, `material`, `weightGrams` (depleted automatically), `costPerKg`, belongs to a user.
+- **PrintJob** - `duration`, `weightGrams`, `success`, `cost` (computed), references a user, printer, and filament.
 
 ## API Overview
 
